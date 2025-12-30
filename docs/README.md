@@ -12,3 +12,17 @@ Included evidence:
 
 These screenshots show safe defaults, clear output, and controlled file deletion
 behavior suitable for IT operations workflows.
+
+## Execution Screenshots
+
+### 1. Help Output
+![Help Output](01-help.png)
+
+### 2. Dry-Run Mode (Safe Default)
+![Dry Run](02-dry-run.png)
+
+### 3. Deletion Mode
+![Delete Mode](03-delete.png)
+
+### 4. Post-Cleanup Verification
+![Verification](04-verify-missing.png)
