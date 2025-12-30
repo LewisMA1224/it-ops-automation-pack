@@ -22,7 +22,7 @@ behavior suitable for IT operations workflows.
 ![Dry Run](02-dry-run.png)
 
 ### 3. Deletion Mode
-![Delete Mode](03-delete.png)
+![Delete Mode](03-delete.png.jpg)
 
 ### 4. Post-Cleanup Verification
-![Verification](04-verify-missing.png)
+![Verification](04-verify-missing.png.jpg)
