@@ -22,7 +22,7 @@ These scripts aim to follow the same expectations you’d have in an enterprise 
 From the repo root:
 
 ```bash
-python scripts/log_cleanup.py --help
+python scripts/log_cleanup.py -- deletes old log files (dry-run by default)
 python scripts/disk_report.py --help
 python scripts/csv_audit.py --help
 
