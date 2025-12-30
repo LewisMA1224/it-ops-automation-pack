@@ -1,18 +1,17 @@
 # Execution Proof — disk_report.py
 
-This directory contains screenshots demonstrating execution of the
+This directory contains screenshots demonstrating the execution of the
 `disk_report.py` script in a Windows PowerShell environment.
 
 Included evidence:
 
 1. Help output (`--help`)
-2. Standard run mode (safe default)
-3. CSV export (`--csv`)
-4. Recursive scan — permission handling (expected behavior)
+2. Basic run (safe default: non-recursive)
+3. Exporting results to CSV (`--csv`)
+4. Recursive scan — Permission handling (expected on protected folders)
 
-These screenshots demonstrate safe defaults, clear CLI output, optional CSV
-export, and real-world filesystem permission handling suitable for IT operations
-and automation workflows.
+These screenshots show clear CLI output, safe defaults, and practical reporting behavior
+suitable for IT operations workflows.
 
 ## Execution Screenshots
 
