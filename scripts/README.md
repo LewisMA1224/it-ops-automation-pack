@@ -1,20 +1,26 @@
-# IT Ops Automation Pack (Python)
+# Scripts
 
-Three small, practical scripts that mirror real IT support workflows: cleaning logs, reporting disk usage, and auditing CSV data.
+This folder contains small, production-minded utilities that mirror common IT support / operations workflows.
 
-## Why this exists
-I work in IT support / operations and wanted a public repo that shows how I approach repeatable tasks:
-- clean inputs
-- safe defaults
-- clear output
-- logs + error handling
+## What’s included
 
-## Scripts
-- **log_cleanup.py** — deletes old log files (with a dry-run option)
-- **disk_report.py** — outputs disk usage to terminal + CSV
-- **csv_audit.py** — validates a CSV (missing values, duplicates, basic stats)
+- **log_cleanup.py** — safely removes old log files (supports dry-run)
+- **disk_report.py** — generates disk usage output to terminal and optional CSV export
+- **csv_audit.py** — validates and summarizes CSVs (missing values, duplicates, basic stats)
+
+## Standards (how these are written)
+
+These scripts aim to follow the same expectations you’d have in an enterprise environment:
+
+- **Safe defaults** (no destructive actions without confirmation / flags)
+- **Clear CLI behavior** (help text, predictable inputs/outputs)
+- **Input validation** (fail fast, readable errors)
+- **Auditable output** (human-readable console + machine-friendly CSV when applicable)
 
 ## Quick start
+
+From the repo root:
+
 ```bash
 python scripts/log_cleanup.py --help
 python scripts/disk_report.py --help
