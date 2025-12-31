@@ -24,3 +24,21 @@ Designed for safe, read-only inspection of data files.
 ```bash
 python csv_audit.py --help
 
+## Execution Screenshots
+
+### 1. Help Output
+Displays available command-line options and usage.
+![Help Output](01-help_output.jpg)
+
+### 2. Standard Run Mode
+Executes a non-recursive disk usage report for a target path.
+![Run](02-basic_run.jpg)
+
+### 3. CSV Export
+Exports disk usage metrics to a CSV file for reporting or auditing.
+![Write Summary Report](03-Write_Summary_Report.jpg)
+
+### 4. Recursive Scan — Permission Handling (Expected Behavior)
+Demonstrates behavior when encountering protected system directories during
+recursive scans on Windows.
+![Export Duplicate Rows](04-Export_duplicate_rows.jpg)
