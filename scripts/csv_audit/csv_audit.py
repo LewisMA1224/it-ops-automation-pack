@@ -9,15 +9,13 @@ What it does:
   - missing values per column (empty cells)
   - duplicate rows (exact duplicates across all columns)
   - basic numeric stats (min/max/mean) for columns that look numeric
-- Optional:
-  - export a summary report CSV (--report)
-  - export duplicate rows to a separate CSV (--dupes-out)
 
 Run examples (Windows-friendly):
-  python csv_audit.py --path "C:/Temp/people-1000.csv"
-  python csv_audit.py --path "C:/Temp/people-1000.csv" --report "C:/Temp/audit_report.csv"
-  python csv_audit.py --path "C:/Temp/people-1000.csv" --dupes-out "C:/Temp/dupes.csv"
-  python csv_audit.py --path "C:/Temp/people-1000.csv" --top-unique 5
+  python csv_audit.py --path "C:\\Temp\\people-1000.csv"
+  python csv_audit.py --path "C:\\Temp\\people-1000.csv" --report "C:\\Temp\\audit_report.csv"
+  python csv_audit.py --path "C:\\Temp\\people-1000.csv" --dupes-out "C:\\Temp\\dupes.csv"
+  python csv_audit.py --path "C:\\Temp\\people-1000.csv" --delimiter ","
+  python csv_audit.py --path "C:\\Temp\\people-1000.csv" --top-unique 5
 
 Notes:
 - Missing value = empty string after trimming whitespace
@@ -41,31 +39,28 @@ class Config:
     delimiter: str
     encoding: str
     report_path: Optional[Path]
-    dupes_out_path: Optional[Path]
+    dupes_out: Optional[Path]
     top_unique: int
 
 
 def parse_args(argv: Sequence[str]) -> Config:
-    parser = argparse.ArgumentParser(
-        description="Audit a CSV file for missing values, duplicates, and basic stats."
-    )
+    parser = argparse.ArgumentParser(description="Audit a CSV file for missing values, duplicates, and basic stats.")
     parser.add_argument("--path", required=True, help="Path to CSV file (must have a header row).")
     parser.add_argument("--delimiter", default=",", help="CSV delimiter (default: ',').")
     parser.add_argument("--encoding", default="utf-8", help="File encoding (default: utf-8).")
     parser.add_argument("--report", dest="report_path", default=None, help="Optional output CSV report path.")
-    parser.add_argument("--dupes-out", dest="dupes_out_path", default=None, help="Optional output CSV containing duplicate rows.")
+    parser.add_argument("--dupes-out", dest="dupes_out", default=None, help="Optional output CSV path for duplicate rows.")
     parser.add_argument(
         "--top-unique",
         type=int,
         default=0,
         help="If > 0, include top N most common values per column (can be slower on large CSVs).",
     )
-
     args = parser.parse_args(argv)
 
     p = Path(args.path).expanduser()
     rp = Path(args.report_path).expanduser() if args.report_path else None
-    dp = Path(args.dupes_out_path).expanduser() if args.dupes_out_path else None
+    dp = Path(args.dupes_out).expanduser() if args.dupes_out else None
 
     delim = args.delimiter
     if len(delim) != 1:
@@ -76,16 +71,18 @@ def parse_args(argv: Sequence[str]) -> Config:
         delimiter=delim,
         encoding=args.encoding,
         report_path=rp,
-        dupes_out_path=dp,
+        dupes_out=dp,
         top_unique=max(0, int(args.top_unique)),
     )
 
 
 def normalize_cell(value: Optional[str]) -> str:
+    """Trim whitespace; treat None as empty."""
     return (value or "").strip()
 
 
 def safe_float(value: str) -> Optional[float]:
+    """Try to parse a number; strips commas. Returns None if cannot parse."""
     v = value.strip()
     if v == "":
         return None
@@ -130,7 +127,7 @@ class ColumnAudit:
     numeric_min: Optional[float]
     numeric_max: Optional[float]
     numeric_mean: Optional[float]
-    top_values: List[Tuple[str, int]]
+    top_values: List[Tuple[str, int]]  # (value, count)
 
 
 @dataclass
@@ -139,8 +136,8 @@ class AuditResult:
     rows: int
     columns: int
     duplicate_rows: int
-    duplicate_row_examples: List[Tuple[int, int]]  # first_row -> dup_row (1-based)
-    duplicate_rows_data: List[Dict[str, str]]      # duplicate occurrences (excluding first)
+    duplicate_row_examples: List[Tuple[int, int]]  # (first_index, dup_index) 1-based
+    duplicate_rows_data: List[Dict[str, str]]      # the actual duplicate rows (excluding first occurrences)
     per_column: List[ColumnAudit]
 
 
@@ -153,19 +150,20 @@ class Auditor:
         top_unique: int,
     ) -> AuditResult:
         row_count = len(rows)
+        col_count = len(headers)
 
         seen: Dict[Tuple[str, ...], int] = {}
         dup_count = 0
         dup_examples: List[Tuple[int, int]] = []
         dup_rows_data: List[Dict[str, str]] = []
 
-        for idx, r in enumerate(rows, start=1):
+        for idx, r in enumerate(rows, start=1):  # 1-based
             signature = tuple(r.get(h, "") for h in headers)
             if signature in seen:
                 dup_count += 1
-                dup_rows_data.append(r)
                 if len(dup_examples) < 10:
                     dup_examples.append((seen[signature], idx))
+                dup_rows_data.append(r)
             else:
                 seen[signature] = idx
 
@@ -217,7 +215,7 @@ class Auditor:
         return AuditResult(
             path=str(path),
             rows=row_count,
-            columns=len(headers),
+            columns=col_count,
             duplicate_rows=dup_count,
             duplicate_row_examples=dup_examples,
             duplicate_rows_data=dup_rows_data,
@@ -226,39 +224,8 @@ class Auditor:
 
 
 class ReportWriter:
-    def _print_table(self, result: AuditResult) -> None:
-        # “Borders” style output using +---+ and |...|
-        col_w = 30
-        line = "+" + "-" * (col_w + 2) + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 10 + "+" + "-" * 14 + "+" + "-" * 14 + "+" + "-" * 14 + "+"
-
-        def cell(s: str, width: int) -> str:
-            s = s if s is not None else ""
-            if len(s) > width:
-                s = s[: width - 3] + "..."
-            return s.ljust(width)
-
-        print("\nPer-column results:")
-        print(line)
-        print(
-            f"| {cell('COLUMN', col_w)} | {cell('MISSING', 8)} | {cell('UNIQUE', 8)} | {cell('NUM#', 8)} "
-            f"| {cell('MIN', 12)} | {cell('MAX', 12)} | {cell('MEAN', 12)} |"
-        )
-        print(line)
-
-        for c in result.per_column:
-            min_s = f"{c.numeric_min:.3f}" if c.numeric_min is not None else "-"
-            max_s = f"{c.numeric_max:.3f}" if c.numeric_max is not None else "-"
-            mean_s = f"{c.numeric_mean:.3f}" if c.numeric_mean is not None else "-"
-
-            print(
-                f"| {cell(c.column, col_w)} | {str(c.missing).rjust(8)} | {str(c.unique_count).rjust(8)} | {str(c.numeric_count).rjust(8)} "
-                f"| {min_s.rjust(12)} | {max_s.rjust(12)} | {mean_s.rjust(12)} |"
-            )
-
-        print(line)
-
     def print_summary(self, result: AuditResult) -> None:
-        print("\nCSV Audit Report")
+        print(f"\nCSV Audit Report")
         print(f"File: {result.path}")
         print(f"Rows: {result.rows}")
         print(f"Columns: {result.columns}")
@@ -269,7 +236,30 @@ class ReportWriter:
             for a, b in result.duplicate_row_examples:
                 print(f"  {a} -> {b}")
 
-        self._print_table(result)
+        print("\nPer-column results:")
+        print("-" * 90)
+        print(f"{'COLUMN':30} {'MISSING':>8} {'UNIQUE':>8} {'NUM#':>8} {'MIN':>12} {'MAX':>12} {'MEAN':>12}")
+        print("-" * 90)
+
+        for c in result.per_column:
+            min_s = f"{c.numeric_min:.3f}" if c.numeric_min is not None else "-"
+            max_s = f"{c.numeric_max:.3f}" if c.numeric_max is not None else "-"
+            mean_s = f"{c.numeric_mean:.3f}" if c.numeric_mean is not None else "-"
+            print(
+                f"{c.column[:30]:30} "
+                f"{c.missing:8d} "
+                f"{c.unique_count:8d} "
+                f"{c.numeric_count:8d} "
+                f"{min_s:>12} "
+                f"{max_s:>12} "
+                f"{mean_s:>12}"
+            )
+
+            if c.top_values:
+                tv = ", ".join([f"{v}({n})" for v, n in c.top_values])
+                print(f"{'':4}Top values: {tv}")
+
+        print("-" * 90)
 
     def write_report_csv(self, report_path: Path, result: AuditResult) -> None:
         report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -280,10 +270,14 @@ class ReportWriter:
             w.writerow(["rows", result.rows])
             w.writerow(["columns", result.columns])
             w.writerow(["duplicate_rows_exact", result.duplicate_rows])
-            w.writerow(["duplicate_examples_first_to_dup", "; ".join([f"{a}->{b}" for a, b in result.duplicate_row_examples])])
+            if result.duplicate_row_examples:
+                w.writerow(["duplicate_examples_first_to_dup", "; ".join([f"{a}->{b}" for a, b in result.duplicate_row_examples])])
+            else:
+                w.writerow(["duplicate_examples_first_to_dup", ""])
 
             w.writerow([])
             w.writerow(["column", "non_empty", "missing", "unique_count", "numeric_count", "numeric_min", "numeric_max", "numeric_mean"])
+
             for c in result.per_column:
                 w.writerow([
                     c.column,
@@ -301,8 +295,8 @@ class ReportWriter:
         with dupes_path.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=headers)
             w.writeheader()
-            for r in dupes:
-                w.writerow({h: r.get(h, "") for h in headers})
+            for row in dupes:
+                w.writerow(row)
 
 
 def main(argv: Sequence[str]) -> int:
@@ -321,16 +315,13 @@ def main(argv: Sequence[str]) -> int:
             writer.write_report_csv(cfg.report_path, result)
             print(f"\nReport CSV written to: {cfg.report_path.resolve()}")
 
-        if cfg.dupes_out_path:
-            writer.write_dupes_csv(cfg.dupes_out_path, headers, result.duplicate_rows_data)
-            print(f"Duplicate rows CSV written to: {cfg.dupes_out_path.resolve()}")
+        if cfg.dupes_out:
+            writer.write_dupes_csv(cfg.dupes_out, headers, result.duplicate_rows_data)
+            print(f"Duplicate rows CSV written to: {cfg.dupes_out.resolve()}")
 
         return 0
 
-    except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 2
-    except ValueError as e:
+    except (FileNotFoundError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 2
     except Exception as e:
