@@ -4,6 +4,10 @@ A small collection of **production-minded CLI utilities** that mirror real IT su
 - cleaning up old log files
 - reporting disk usage
 - auditing CSV data used in reporting
+- 
+## Who this is for
+IT analysts, application support, and junior engineers who want small,
+reliable Python tools for everyday operational tasks.
 
 ## Why this exists
 I work in IT support / operations and wanted a public repo that shows how I approach repeatable tasks:
