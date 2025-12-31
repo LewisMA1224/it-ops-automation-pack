@@ -21,7 +21,7 @@ Designed for safe, read-only inspection of data files.
 ## Usage
 
 ### Help
-```bash
+
 python csv_audit.py --help
 
 ## Execution Screenshots
